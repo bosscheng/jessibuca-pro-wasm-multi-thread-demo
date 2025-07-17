@@ -3,9 +3,32 @@ const fs = require('fs');
 const express = require('express');
 const path = require('path');
 const os = require('os');
+const compression = require('compression');
 
 // 创建 Express 应用
 const app = express();
+
+// 启用压缩中间件 - 优先使用 Brotli，回退到 gzip
+app.use(compression({
+  // 启用 Brotli 压缩（如果浏览器支持）
+  brotli: {
+    enabled: true,
+    zlib: {
+      level: 11, // 最高压缩级别
+    },
+  },
+  // gzip 压缩配置
+  level: 6, // 压缩级别 (0-9)
+  threshold: 1024, // 只压缩大于 1KB 的文件
+  filter: (req, res) => {
+    // 跳过已经压缩的文件类型
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // 只压缩文本类型的文件
+    return compression.filter(req, res);
+  }
+}));
 
 // 添加安全响应头的中间件
 app.use((req, res, next) => {
